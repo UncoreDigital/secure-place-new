@@ -11907,7 +11907,8 @@ body.tp-magic-cursor #magic-cursor {
 .tp-contact-map-box iframe {
   height: 640px;
   width: 100%;
-  filter: saturate(0);
+  /* filter: saturate(0); */
+  filter: none !important;
 }
 @media only screen and (min-width: 992px) and (max-width: 1199px),
   only screen and (min-width: 768px) and (max-width: 991px) {
