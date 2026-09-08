@@ -1,24 +1,15 @@
-# build output
-dist/
-
-# generated types
-.astro/
-
-# dependencies
-node_modules/
-
-# logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# environment variables
-.env
-.env.production
-
-# macOS-specific files
+node_modules
+.next
+out
+build
 .DS_Store
-
-# jetbrains setting folder
-.idea/
+*.pem
+npm-debug.log*
+# All env files. .env*.local alone did NOT cover a plain .env, which is where
+# the service-role key would sit — one `git add -A` from being in history.
+.env
+.env.*
+!.env.example
+.vercel
+*.tsbuildinfo
+next-env.d.ts
