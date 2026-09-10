@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check, RotateCcw, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Mail,
+  MailCheck,
+  RotateCcw,
+  ShieldCheck,
+} from "lucide-react";
 import {
   pillars,
   questions,
@@ -13,11 +21,17 @@ import {
   type PillarId,
 } from "@/lib/secure-score/questions";
 import { scoreAnswers, type Answers } from "@/lib/secure-score/score";
-import { submitAssessment } from "@/lib/actions";
+import {
+  startAssessmentVerification,
+  verifyAssessmentOtp,
+  resendAssessmentOtp,
+} from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 
-type Step = "context" | PillarId | "gate" | "result";
+// "result" is deliberately gone. The score is emailed after the address is
+// proven, never rendered here — see startAssessmentVerification.
+type Step = "context" | PillarId | "gate" | "verify" | "done";
 
 const STORAGE_KEY = "sptw.secure-score.v1";
 
@@ -40,39 +54,9 @@ const emptyContext: Context = {
   siteCount: "",
 };
 
-const steps: Step[] = ["context", ...pillars.map((p) => p.id), "gate", "result"];
+const steps: Step[] = ["context", ...pillars.map((p) => p.id), "gate", "verify", "done"];
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-
-/** Counts to the final score once, so the reveal lands rather than just appearing. */
-function ScoreNumber({ value }: { value: number }) {
-  const reduce = useReducedMotion();
-  const [shown, setShown] = useState(reduce ? value : 0);
-
-  useEffect(() => {
-    if (reduce) {
-      setShown(value);
-      return;
-    }
-    let frame = 0;
-    const start = performance.now();
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - start) / 1400);
-      setShown(Math.round(value * (1 - Math.pow(1 - p, 4))));
-      if (p < 1) frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [value, reduce]);
-
-  return <>{shown}</>;
-}
-
-const toneClasses = {
-  good: { text: "text-[var(--color-signal-good)]", bg: "bg-[var(--color-signal-good)]" },
-  warn: { text: "text-[var(--color-signal-warn)]", bg: "bg-[var(--color-signal-warn)]" },
-  bad: { text: "text-[var(--color-signal-bad)]", bg: "bg-[var(--color-signal-bad)]" },
-} as const;
 
 export default function Assessment() {
   const [stepIndex, setStepIndex] = useState(0);
@@ -82,6 +66,11 @@ export default function Assessment() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [restored, setRestored] = useState(false);
+  const [verificationId, setVerificationId] = useState("");
+  const [otp, setOtp] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
+  const [resendNote, setResendNote] = useState("");
 
   const step = steps[stepIndex];
   const result = useMemo(() => scoreAnswers(answers), [answers]);
@@ -150,6 +139,13 @@ export default function Assessment() {
     setContext(emptyContext);
     setContact({ name: "", email: "" });
     setRestored(false);
+    // A retake is a new submission: carrying the old verification id forward
+    // would post the second set of answers against the first attempt's code.
+    setVerificationId("");
+    setOtp("");
+    setSubmitError("");
+    setVerifyError("");
+    setResendNote("");
     try {
       window.localStorage.removeItem(STORAGE_KEY);
     } catch {
@@ -263,28 +259,42 @@ export default function Assessment() {
       setSubmitting(true);
       setSubmitError("");
 
-      const saved = await submitAssessment({
-        name: contact.name,
-        email: contact.email,
-        company: context.company,
-        industry: context.industry,
-        employeeBand: context.employeeBand,
-        siteCount: context.siteCount,
-        answers,
-        pillarScores: result.pillarScores,
-        totalScore: result.total,
-        band: result.band.id,
-        engineVersion: ENGINE_VERSION,
-      });
+      // try/finally, not a bare await: a server action can throw (a network
+      // drop, a bad deploy), and without this the button kept saying "Sending
+      // your code…" for as long as the page stayed open.
+      try {
+        const started = await startAssessmentVerification({
+          name: contact.name,
+          email: contact.email,
+          company: context.company,
+          industry: context.industry,
+          employeeBand: context.employeeBand,
+          siteCount: context.siteCount,
+          answers,
+          pillarScores: result.pillarScores,
+          totalScore: result.total,
+          band: result.band.id,
+          engineVersion: ENGINE_VERSION,
+        });
 
-      setSubmitting(false);
+        // Stay on this step when it fails. The report is only ever delivered by
+        // email now, so there is nothing to advance to if the code never went
+        // out — moving on would leave them waiting for mail that is not coming.
+        if (!started.ok) {
+          setSubmitError(started.error);
+          return;
+        }
 
-      // The score is computed client-side, so it can always be shown. Someone
-      // who answered twenty questions should not be denied their result
-      // because our database was briefly unreachable — the failure is ours.
-      // It is logged server-side and the message here is advisory only.
-      if (!saved.ok) setSubmitError(saved.error);
-      goTo(steps.indexOf("result"));
+        setVerificationId(started.verificationId);
+        goTo(steps.indexOf("verify"));
+      } catch (cause) {
+        console.error("startAssessmentVerification threw:", cause);
+        setSubmitError(
+          "We could not reach the server. Check your connection and try again.",
+        );
+      } finally {
+        setSubmitting(false);
+      }
     };
 
     return (
@@ -294,15 +304,13 @@ export default function Assessment() {
             <ShieldCheck className="h-5 w-5 text-flame-700" />
           </span>
           <h2 className="mt-5 font-display text-3xl font-bold text-navy-950">
-            Your score is ready
+            Your report is ready
           </h2>
+          {/* No band, no number. Revealing the result here would defeat the
+              verification: the address has not been proven yet. */}
           <p className="mt-3 text-md leading-relaxed text-mist-500">
-            You scored in the{" "}
-            <strong className={cn("font-semibold", toneClasses[result.band.tone].text)}>
-              {result.band.label}
-            </strong>{" "}
-            band. Tell us where to send the full breakdown and we will show it
-            now.
+            Tell us where to send it. We will email a six-digit code to confirm
+            the address, then send your full breakdown across.
           </p>
 
           <form onSubmit={submit} className="mt-8 flex flex-col gap-4 text-left">
@@ -327,9 +335,17 @@ export default function Assessment() {
               />
             </Field>
             <Button size="lg" className="mt-2 w-full" disabled={!validEmail || submitting}>
-              {submitting ? "Preparing your report…" : "Show my score"}
+              {submitting ? "Sending your code…" : "Email me my report"}
               {!submitting && <ArrowRight className="h-4 w-4" />}
             </Button>
+            {submitError && (
+              <p
+                role="alert"
+                className="rounded-xl border border-[var(--color-signal-warn)]/30 bg-[color-mix(in_srgb,var(--color-signal-warn)_8%,transparent)] px-4 py-3 text-sm text-[var(--color-signal-warn)]"
+              >
+                {submitError}
+              </p>
+            )}
             <p className="text-center text-xs leading-relaxed text-mist-400">
               We use this to send your report and follow up once. No list
               sharing.
@@ -348,143 +364,193 @@ export default function Assessment() {
     );
   }
 
-  // --- result ----------------------------------------------------------------
-  if (step === "result") {
-    const tone = toneClasses[result.band.tone];
+  // --- verify ----------------------------------------------------------------
+  if (step === "verify") {
+    const ready = otp.replace(/\D/g, "").length === 6;
+
+    const submitCode = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!ready || verifying) return;
+
+      setVerifying(true);
+      setVerifyError("");
+      setResendNote("");
+
+      try {
+        const checked = await verifyAssessmentOtp(verificationId, otp);
+        if (!checked.ok) {
+          setVerifyError(checked.error);
+          return;
+        }
+        goTo(steps.indexOf("done"));
+      } catch (cause) {
+        console.error("verifyAssessmentOtp threw:", cause);
+        setVerifyError(
+          "We could not reach the server. Check your connection and try again.",
+        );
+      } finally {
+        setVerifying(false);
+      }
+    };
+
+    const resend = async () => {
+      if (verifying) return;
+      setVerifying(true);
+      setVerifyError("");
+      setResendNote("");
+
+      try {
+        const again = await resendAssessmentOtp(verificationId);
+        if (!again.ok) {
+          setVerifyError(again.error);
+          return;
+        }
+        setOtp("");
+        setResendNote("A new code is on its way.");
+      } catch (cause) {
+        console.error("resendAssessmentOtp threw:", cause);
+        setVerifyError(
+          "We could not reach the server. Check your connection and try again.",
+        );
+      } finally {
+        setVerifying(false);
+      }
+    };
+
     return (
-      <div className="mx-auto max-w-4xl">
-        <div className="overflow-hidden rounded-2xl border border-mist-200 bg-white">
-          <div className="border-b border-mist-200 bg-navy-950 px-7 py-12 text-center md:px-12">
-            <p className="font-mono text-2xs font-semibold uppercase tracking-[0.16em] text-flame-400">
-              Your Secure Score
-            </p>
-            <motion.p
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 18, delay: 0.1 }}
-              className="mt-5 font-display text-6xl font-bold leading-none tabular-nums text-white"
+      <Shell progress={100} stepKey="verify">
+        <div className="mx-auto max-w-lg text-center">
+          <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-flame-500/12">
+            <Mail className="h-5 w-5 text-flame-700" />
+          </span>
+          <h2 className="mt-5 font-display text-3xl font-bold text-navy-950">
+            Check your email
+          </h2>
+          <p className="mt-3 text-md leading-relaxed text-mist-500">
+            We sent a six-digit code to{" "}
+            <strong className="font-semibold text-navy-950">{contact.email}</strong>.
+            Enter it below and your report follows straight away.
+          </p>
+
+          <form onSubmit={submitCode} className="mt-8 flex flex-col gap-4">
+            <label htmlFor="otp" className="sr-only">
+              Six-digit verification code
+            </label>
+            <input
+              id="otp"
+              // inputMode + autoComplete let phones offer the code straight
+              // from the notification instead of making people switch apps.
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]*"
+              maxLength={6}
+              autoFocus
+              value={otp}
+              onChange={(e) => {
+                setOtp(e.target.value.replace(/\D/g, "").slice(0, 6));
+                setVerifyError("");
+              }}
+              className="w-full rounded-xl border border-mist-200 bg-white px-4 py-4 text-center font-mono text-3xl font-semibold tracking-[0.4em] text-navy-950 outline-none transition-colors focus:border-flame-500"
+              placeholder="······"
+            />
+
+            <Button size="lg" className="w-full" disabled={!ready || verifying}>
+              {verifying ? "Checking…" : "Verify and send my report"}
+              {!verifying && <ArrowRight className="h-4 w-4" />}
+            </Button>
+          </form>
+
+          {verifyError && (
+            <p
+              role="alert"
+              className="mt-4 rounded-xl border border-[var(--color-signal-warn)]/30 bg-[color-mix(in_srgb,var(--color-signal-warn)_8%,transparent)] px-4 py-3 text-sm text-[var(--color-signal-warn)]"
             >
-              <ScoreNumber value={result.total} />
-              <span className="text-4xl text-white/40">/100</span>
-            </motion.p>
-            <p className={cn("mt-4 font-display text-xl font-semibold", tone.text)}>
-              {result.band.label}
+              {verifyError}
             </p>
-            <p className="mx-auto mt-4 max-w-xl text-md leading-relaxed text-white/65">
-              {result.band.headline} {result.band.body}
+          )}
+
+          {resendNote && (
+            <p role="status" className="mt-4 text-sm font-medium text-navy-950">
+              {resendNote}
             </p>
-            <div className="mt-8">
-              <Button href={result.band.ctaHref} size="lg">
-                {result.band.ctaLabel}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
+          )}
+
+          <SpamNote />
+
+          <button
+            type="button"
+            onClick={resend}
+            disabled={verifying}
+            className="mt-5 text-sm font-semibold text-navy-950 underline underline-offset-4 hover:text-flame-700 disabled:opacity-50"
+          >
+            Send the code again
+          </button>
+
+          <button
+            type="button"
+            onClick={() => goTo(steps.indexOf("gate"))}
+            className="mt-4 block w-full text-sm text-mist-400 hover:text-navy-950"
+          >
+            Use a different email address
+          </button>
+        </div>
+      </Shell>
+    );
+  }
+
+  // --- done ------------------------------------------------------------------
+  if (step === "done") {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="rounded-2xl border border-mist-200 bg-white px-7 py-12 text-center md:px-12">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-navy-950">
+            <MailCheck className="h-6 w-6 text-flame-500" />
+          </span>
+
+          <h2 className="mt-6 font-display text-3xl font-bold text-navy-950">
+            Your report is on its way
+          </h2>
+          <p className="mx-auto mt-4 max-w-md text-md leading-relaxed text-mist-500">
+            We have sent your Secure Score breakdown to{" "}
+            <strong className="font-semibold text-navy-950">{contact.email}</strong>
+            . It covers your score out of 100, how you did across the five
+            pillars, and where the effort pays off most.
+          </p>
+
+          <SpamNote />
+
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Button href="/demo" size="lg">
+              Book a walkthrough
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <Button href="/workshops" variant="outline" size="lg" className="text-navy-950">
+              See the workshops
+            </Button>
           </div>
 
-          <div className="px-7 py-10 md:px-12">
-            <h2 className="font-display text-2xl font-bold text-navy-950">
-              How you scored across the five pillars
-            </h2>
-            <div className="mt-7 flex flex-col gap-4">
-              {pillars.map((pillar, i) => {
-                const value = result.pillarScores[pillar.id];
-                return (
-                  <div
-                    key={pillar.id}
-                    className="grid grid-cols-[1fr_auto] items-center gap-x-5 gap-y-2 sm:grid-cols-[minmax(0,13rem)_1fr_auto]"
-                  >
-                    <span className="text-base font-semibold text-navy-950">
-                      {pillar.label}
-                    </span>
-                    <div className="col-span-2 h-2 overflow-hidden rounded-sm bg-mist-100 sm:col-span-1">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        whileInView={{ width: `${value}%` }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 1, ease: EASE, delay: 0.15 + i * 0.09 }}
-                        className="h-2 rounded-sm bg-flame-500"
-                      />
-                    </div>
-                    <span className="font-mono text-base font-semibold tabular-nums text-navy-950">
-                      {value}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-12 border-t border-mist-200 pt-10">
-              <h2 className="font-display text-2xl font-bold text-navy-950">
-                Your three biggest gaps
-              </h2>
-              <p className="mt-2 text-base text-mist-500">
-                Ordered by weakest first. These are where effort moves your score
-                the most.
-              </p>
-              <ol className="mt-7 flex flex-col">
-                {result.gaps.map((gap, i) => (
-                  <li
-                    key={gap.pillar.id}
-                    className="grid grid-cols-[auto_1fr] gap-5 border-t border-mist-100 py-6 first:border-t-0 first:pt-0"
-                  >
-                    <span className="font-mono text-sm font-semibold tabular-nums text-flame-700">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <div>
-                      <div className="flex flex-wrap items-baseline justify-between gap-3">
-                        <h3 className="font-display text-lg font-semibold text-navy-950">
-                          {gap.pillar.label}
-                        </h3>
-                        <span className="font-mono text-sm font-semibold tabular-nums text-mist-400">
-                          {gap.score}/100
-                        </span>
-                      </div>
-                      <p className="mt-2 text-base leading-relaxed text-mist-600">
-                        {gap.pillar.gapAdvice}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
-
-            {submitError && (
-              <p
-                role="alert"
-                className="mt-8 rounded-xl border border-[var(--color-signal-warn)]/30 bg-[color-mix(in_srgb,var(--color-signal-warn)_8%,transparent)] px-5 py-4 text-base text-[var(--color-signal-warn)]"
-              >
-                Your score is shown below, but we could not save it — so the
-                emailed copy will not arrive. {submitError}
-              </p>
-            )}
-
-            <div className="mt-10 rounded-xl border border-mist-200 bg-mist-50 px-5 py-4">
-              <p className="text-sm leading-relaxed text-mist-500">
-                <strong className="text-navy-950">This is indicative.</strong> A
-                Secure Score is a self-assessment, not a certification.
-                Certification is awarded only after an audited survey of your
-                workplace.{" "}
-                <Link href="/certification" className="font-semibold text-flame-700 hover:underline">
-                  See what the audit involves
-                </Link>
-                .
-              </p>
-            </div>
-
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
-              <button
-                type="button"
-                onClick={restart}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-mist-500 hover:text-navy-950"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Take it again
-              </button>
-              <Button href="/workshops" variant="outline" className="text-navy-950">
-                See workshops that close these gaps
-              </Button>
-            </div>
+          <div className="mt-10 border-t border-mist-200 pt-6">
+            <p className="text-sm leading-relaxed text-mist-500">
+              <strong className="text-navy-950">This is indicative.</strong> A
+              Secure Score is a self-assessment, not a certification.
+              Certification is awarded only after an audited survey of your
+              workplace.{" "}
+              <Link href="/certification" className="font-semibold text-flame-700 hover:underline">
+                See what the audit involves
+              </Link>
+              .
+            </p>
           </div>
+
+          <button
+            type="button"
+            onClick={restart}
+            className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-mist-500 hover:text-navy-950"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Take it again
+          </button>
         </div>
       </div>
     );
@@ -642,5 +708,24 @@ function Shell({
         {children}
       </motion.div>
     </div>
+  );
+}
+
+/**
+ * The single most common support question for any emailed report.
+ *
+ * Shown on both the verify and the confirmation step, because the mail people
+ * fail to find is as often the code as the report itself.
+ */
+function SpamNote() {
+  return (
+    <p className="mx-auto mt-6 flex max-w-sm items-start gap-2.5 rounded-xl border border-mist-200 bg-mist-50 px-4 py-3 text-left text-sm leading-relaxed text-mist-600">
+      <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-mist-400" />
+      <span>
+        <strong className="font-semibold text-navy-950">Not in your inbox?</strong>{" "}
+        Please check your spam or junk folder — automated mail often lands
+        there. Marking it as not spam helps the report arrive too.
+      </span>
+    </p>
   );
 }
