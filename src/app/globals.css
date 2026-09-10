@@ -1,0 +1,307 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Design tokens
+   Navy and orange are the existing brand, carried over from the Astro site and
+   confirmed against the client's prototype. Neutrals are biased cool toward the
+   navy rather than being pure greys, so they sit with the brand instead of
+   fighting it.
+   --------------------------------------------------------------------------- */
+
+@theme {
+  --color-navy-950: #001d49;
+  --color-navy-900: #04265b;
+  --color-navy-800: #0a3272;
+  --color-navy-700: #14418c;
+  --color-navy-600: #2b5aa8;
+  --color-navy-500: #4a79c4;
+
+  --color-flame-700: #c9450a;
+  --color-flame-600: #e5500c;
+  --color-flame-500: #ff5f15;
+  --color-flame-400: #ff7f42;
+  --color-flame-300: #ffa173;
+  --color-flame-100: #ffe4d6;
+
+  --color-mist-50: #f4f7fb;
+  --color-mist-100: #e9eff6;
+  --color-mist-200: #d6e0ec;
+  --color-mist-300: #b6c4d6;
+  /* Darkened from #8496ae, which measured 3.02:1 on white and 2.81:1 on
+     mist-50 — below the 4.5:1 WCAG AA needs for body text, and it was carrying
+     dates, reading times and menu descriptions. #607189 keeps the same cool
+     slate hue at 4.98:1 / 4.63:1. */
+  --color-mist-400: #607189;
+  --color-mist-500: #5b6b84;
+  --color-mist-600: #44536b;
+  --color-mist-700: #2e3b50;
+
+  --color-ink: #0f1b2d;
+
+  /* Semantic, kept separate from the brand accent so a score band never reads
+     as a call to action. */
+  --color-signal-good: #0e7c61;
+  --color-signal-warn: #b4690e;
+  --color-signal-bad: #b42318;
+
+  /* ---------------------------------------------------------------------
+     Type scale.
+
+     Replaces 42 one-off arbitrary sizes that had drifted into the codebase --
+     including ten near-identical steps between 0.875rem and 1.02rem that no
+     reader could tell apart, and a 1.05rem that was doing duty as both a card
+     title and a body paragraph. A heading and the prose under it rendering at
+     the same size is what made the pages read as unresolved.
+
+     Twelve steps, each a clear jump from the last, split into a body range
+     (2xs-md) and a heading range (lg-6xl) so hierarchy is structural rather
+     than a matter of a few hundredths of a rem.
+     --------------------------------------------------------------------- */
+  --text-2xs: 0.6875rem;        /* 11px — mono eyebrows, badges */
+  --text-2xs--line-height: 1.45;
+  --text-xs: 0.75rem;           /* 12px — meta, captions */
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.8125rem;         /* 13px — small UI, footnotes */
+  --text-sm--line-height: 1.55;
+  --text-base: 0.9375rem;       /* 15px — card body */
+  --text-base--line-height: 1.62;
+  --text-md: 1rem;              /* 16px — body */
+  --text-md--line-height: 1.68;
+  --text-lg: 1.125rem;          /* 18px — lede, card title */
+  --text-lg--line-height: 1.5;
+  --text-xl: 1.25rem;           /* 20px — section subhead */
+  --text-xl--line-height: 1.35;
+  --text-2xl: 1.5rem;           /* 24px */
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 1.75rem;          /* 28px */
+  --text-3xl--line-height: 1.2;
+  --text-4xl: 2.125rem;         /* 34px */
+  --text-4xl--line-height: 1.12;
+  --text-5xl: 2.75rem;          /* 44px */
+  --text-5xl--line-height: 1.06;
+  --text-6xl: 4rem;             /* 64px — display figures */
+  --text-6xl--line-height: 1;
+
+  /* Fluid display steps. Eight bespoke clamp() calls had accumulated across the
+     pages, several differing only in their upper bound -- six named steps
+     replace them so headings scale identically everywhere. */
+  --text-fluid-sm: clamp(1.5rem, 2.6vw, 2rem);
+  --text-fluid-sm--line-height: 1.18;
+  --text-fluid-md: clamp(1.625rem, 3.2vw, 2.25rem);
+  --text-fluid-md--line-height: 1.14;
+  --text-fluid-lg: clamp(1.75rem, 3.6vw, 2.625rem);
+  --text-fluid-lg--line-height: 1.1;
+  --text-fluid-xl: clamp(2rem, 4.4vw, 3rem);
+  --text-fluid-xl--line-height: 1.06;
+  --text-fluid-2xl: clamp(2.25rem, 5vw, 3.5rem);
+  --text-fluid-2xl--line-height: 1.03;
+  --text-fluid-3xl: clamp(2.5rem, 6vw, 4.25rem);
+  --text-fluid-3xl--line-height: 0.98;
+
+  --font-display: var(--font-archivo), "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-public-sans), -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), "SFMono-Regular", Consolas, monospace;
+
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ---------------------------------------------------------------------
+     Elevation.
+
+     Nine bespoke shadows had accumulated, differing by a pixel or two of blur
+     and a hundredth of alpha — variety with no meaning attached to it. Four
+     levels replace them, each doing a specific job.
+
+     Every level is two layers: a tight contact shadow that grounds the edge,
+     and a wide ambient one that gives the object air. A single blur reads flat
+     and slightly muddy; the pair is what makes a surface feel liftable.
+
+     Tinted navy rather than black, so shadows sit in the same colour world as
+     the cool-neutral grounds instead of greying them out.
+     --------------------------------------------------------------------- */
+  --shadow-e1:
+    0 1px 2px -1px rgb(0 29 73 / 0.08),
+    0 4px 12px -6px rgb(0 29 73 / 0.10);
+  --shadow-e2:
+    0 2px 4px -2px rgb(0 29 73 / 0.10),
+    0 18px 40px -22px rgb(0 29 73 / 0.32);
+  --shadow-e3:
+    0 4px 8px -4px rgb(0 29 73 / 0.12),
+    0 28px 60px -28px rgb(0 29 73 / 0.40);
+  --shadow-e4:
+    0 6px 12px -6px rgb(0 29 73 / 0.16),
+    0 40px 80px -32px rgb(0 29 73 / 0.48);
+
+  /* The primary CTA carries its own colour, so its shadow is flame-tinted —
+     a neutral shadow under a saturated button reads as dirt. */
+  --shadow-glow:
+    0 2px 6px -2px rgb(201 69 10 / 0.32),
+    0 10px 26px -12px rgb(255 95 21 / 0.60);
+  --shadow-glow-lg:
+    0 3px 8px -2px rgb(201 69 10 / 0.38),
+    0 18px 38px -14px rgb(255 95 21 / 0.58);
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------------- */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: #ffffff;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+    letter-spacing: -0.025em;
+  }
+
+  /* Anything with an id can be an anchor target, so the offset belongs on the
+     element itself rather than on :target — which only matches while the hash
+     is current, and so silently stops working after a client-side navigation
+     changes the URL. */
+  [id] {
+    scroll-margin-top: 6rem;
+  }
+
+  /* One visible focus treatment everywhere, rather than per-component.
+     A white inner ring means the marker stays visible against dark navy
+     sections as well as white ones. */
+  :focus-visible {
+    outline: 2px solid var(--color-flame-500);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgb(255 255 255 / 0.65);
+    border-radius: 4px;
+  }
+
+  /* Form controls get a real focus state, not just a border colour shift:
+     a tinted ring reads as "this field is live" at a glance. */
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+    border-color: var(--color-flame-500);
+    box-shadow: 0 0 0 3px rgb(255 95 21 / 0.14);
+  }
+
+  /* Prose links underline from the accent rather than inheriting a browser
+     default, and thicken on hover so the target feels tactile. */
+  a {
+    text-underline-offset: 0.18em;
+    text-decoration-thickness: from-font;
+  }
+
+  ::selection {
+    background-color: var(--color-flame-500);
+    color: #ffffff;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Utilities
+   --------------------------------------------------------------------------- */
+
+@utility container-page {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 80rem;
+  padding-inline: 1.25rem;
+
+  @media (width >= 768px) {
+    padding-inline: 2rem;
+  }
+}
+
+/* Section rhythm.
+
+   Four competing paddings had accumulated across the pages — py-16/24,
+   py-16/20, py-20/28 and py-20/24 — so adjacent sections breathed differently
+   for no reason a reader could perceive as intentional. Two named steps:
+   the standard one for content sections, the compact one for tighter bands. */
+@utility section-y {
+  padding-block: 5rem; /* 80px */
+
+  @media (width >= 768px) {
+    padding-block: 7rem; /* 112px */
+  }
+}
+
+@utility section-y-sm {
+  padding-block: 4rem; /* 64px */
+
+  @media (width >= 768px) {
+    padding-block: 5rem; /* 80px */
+  }
+}
+
+/* Reveal-on-scroll starts visible and is only hidden once the observer has
+   confirmed it can run. A page that never executes JS still reads correctly,
+   and the first paint is never a blank column. */
+@utility reveal {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.7s var(--ease-out-expo),
+    transform 0.7s var(--ease-out-expo);
+}
+
+/* An underline that draws in from the left on hover. Used on inline text links
+   where a permanent underline would clutter, but the affordance still needs to
+   appear the moment the pointer arrives. */
+@utility link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0% 1px;
+  transition: background-size 0.35s var(--ease-out-expo);
+
+  &:hover,
+  &:focus-visible {
+    background-size: 100% 1px;
+  }
+}
+
+@layer utilities {
+  [data-reveal-armed="true"] .reveal:not(.is-visible) {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    [data-reveal-armed="true"] .reveal:not(.is-visible) {
+      opacity: 1;
+      transform: none;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    /* Suppress the hover-lift and press-depress transforms too. Killing only
+       the transition duration would leave them snapping instantly into place,
+       which is more jarring than the animation it replaced. */
+    .group\/btn,
+    [class*="hover:-translate-y"],
+    [class*="active:translate-y"] {
+      transform: none !important;
+    }
+  }
+}
