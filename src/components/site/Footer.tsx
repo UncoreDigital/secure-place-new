@@ -17,7 +17,7 @@ export default function Footer() {
                 alt={site.name}
                 width={logo.width}
                 height={logo.height}
-                className="h-12 w-auto object-contain"
+                className="h-16 w-auto object-contain"
               />
             </Link>
             <p className="mt-5 text-base leading-relaxed text-white/65">

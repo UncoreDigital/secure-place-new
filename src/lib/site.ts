@@ -51,29 +51,23 @@ export const primaryNav: NavLink[] = [
 ];
 
 /**
- * Logo pairing. Both are 512x216. logo1 carries dark text for light grounds,
- * logo6 carries white text for the navy header and footer.
+ * Logo pairing. Both are the SECURE PLACE™ lockup, trimmed from the client's
+ * 1080x1350 masters (logo1.png / logo6.png) down to the artwork itself — the
+ * masters are ~84% empty canvas, which shrank the lockup to a few pixels once
+ * object-contain fitted them into a header-height box.
  *
- * Do not use logo-black.png / logo-white.png — those ship with the purchased
- * template and read "Budgeto", a different company entirely.
+ * -navy carries the black wordmark for light grounds, -white the white wordmark
+ * for the navy header and footer. logo-mark.png is the handshake on its own.
+ *
+ * Do not use logo8.png / logo9.png — those ship with the purchased template and
+ * read "Budgeto", a different company entirely.
  */
 export const logo = {
-  onLight: "/assets/img/logo/logo1.png",
-  onDark: "/assets/img/logo/logo6.png",
-  width: 512,
-  height: 216,
-
-  /**
-   * The handshake brand mark, icon only — paired with the company name as live
-   * text by <Logo>. `markOnDark` is the variant with the navy half knocked out
-   * to white; until the client supplies one, <Logo> sets the mark on a white
-   * tile so the navy half does not vanish into the navy header and footer.
-   */
-  mark: "/assets/img/logo/logo-mark.svg",
-  markOnDark: null as string | null,
-  markWidth: 512,
-  markHeight: 512,
-};
+  onLight: "/assets/img/logo/logo-lockup-navy.png",
+  onDark: "/assets/img/logo/logo-lockup-white.png",
+  width: 738,
+  height: 299,
+} as const;
 
 export const footerNav: { title: string; links: NavLink[] }[] = [
   {

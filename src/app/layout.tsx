@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     description: site.description,
   },
   robots: { index: true, follow: true },
-  icons: { icon: "/assets/img/logo/favicon.png" },
+  icons: { icon: "/assets/img/logo/favicon-mark.png" },
 };
 
 export default async function RootLayout({

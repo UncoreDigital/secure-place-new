@@ -134,7 +134,7 @@ export default function Header({ workshops }: { workshops: WorkshopNav[] }) {
                 width={logo.width}
                 height={logo.height}
                 priority
-                className="h-10 w-auto object-contain md:h-11"
+                className="h-11 w-auto object-contain md:h-14"
               />
             </motion.span>
           </Link>
