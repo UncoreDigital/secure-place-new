@@ -62,7 +62,18 @@ export const logo = {
   onDark: "/assets/img/logo/logo6.png",
   width: 512,
   height: 216,
-} as const;
+
+  /**
+   * The handshake brand mark, icon only — paired with the company name as live
+   * text by <Logo>. `markOnDark` is the variant with the navy half knocked out
+   * to white; until the client supplies one, <Logo> sets the mark on a white
+   * tile so the navy half does not vanish into the navy header and footer.
+   */
+  mark: "/assets/img/logo/logo-mark.svg",
+  markOnDark: null as string | null,
+  markWidth: 512,
+  markHeight: 512,
+};
 
 export const footerNav: { title: string; links: NavLink[] }[] = [
   {
