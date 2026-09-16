@@ -35,6 +35,7 @@ export default function Header({ workshops }: { workshops: WorkshopNav[] }) {
   const [menu, setMenu] = useState<string | null>(null);
   const [mobileSub, setMobileSub] = useState<string | null>(null);
   const navRef = useRef<HTMLDivElement>(null);
+  const megaRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<number | undefined>(undefined);
   const reduce = useReducedMotion();
 
@@ -73,7 +74,12 @@ export default function Header({ workshops }: { workshops: WorkshopNav[] }) {
     if (!menu) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenu(null);
     const onClick = (e: MouseEvent) => {
-      if (navRef.current && !navRef.current.contains(e.target as Node)) setMenu(null);
+      // The panel is a sibling of the nav, not a child, so it has to be
+      // checked too — otherwise mousedown on a menu link closed the panel and
+      // the click that followed landed on whatever took its place.
+      const t = e.target as Node;
+      if (navRef.current?.contains(t) || megaRef.current?.contains(t)) return;
+      setMenu(null);
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("mousedown", onClick);
@@ -253,13 +259,19 @@ export default function Header({ workshops }: { workshops: WorkshopNav[] }) {
           {active?.mega && (
             <motion.div
               key="mega"
+              ref={megaRef}
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.24, ease: EASE }}
               onMouseEnter={() => openMenu(active.label)}
               onMouseLeave={scheduleClose}
-              className="absolute inset-x-0 top-full hidden border-b border-navy-950/10 bg-white/95 backdrop-blur-xl lg:block"
+              /* The Workshops panel is built from the catalogue, so it grows
+                 with the data — past a laptop's viewport it ran off the bottom
+                 of the screen and the last workshops were unreachable. Cap it
+                 to what is left below the header and let it scroll; overscroll
+                 containment keeps the wheel from falling through to the page. */
+              className="absolute inset-x-0 top-full hidden max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain border-b border-navy-950/10 bg-white/95 backdrop-blur-xl lg:block"
             >
               <motion.div
                 layout
@@ -319,7 +331,12 @@ export default function Header({ workshops }: { workshops: WorkshopNav[] }) {
                                 )}
                               </span>
                               {item.description && (
-                                <span className="mt-1 block text-sm leading-snug text-mist-400">
+                                /* Clamped, not cut: the catalogue summaries
+                                   run to three or four lines each, and ten of
+                                   them stacked made the panel taller than the
+                                   screen. Two lines each keeps every workshop
+                                   on one screen with its description intact. */
+                                <span className="mt-1 line-clamp-2 block text-sm leading-snug text-mist-400">
                                   {item.description}
                                 </span>
                               )}

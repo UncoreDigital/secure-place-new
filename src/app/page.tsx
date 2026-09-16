@@ -209,7 +209,9 @@ export default async function HomePage() {
                 className="group overflow-hidden rounded-2xl border border-mist-200 transition-[border-color,box-shadow] duration-300 hover:border-mist-300 hover:shadow-(--shadow-e3)"
               >
                 {workshop.coverUrl && (
-                  <div className="relative aspect-[16/10] overflow-hidden bg-mist-100">
+                  /* 700x249 banners with the workshop name set into the
+                     artwork — 16/10 cropped the lettering off both ends. */
+                  <div className="relative aspect-[700/249] overflow-hidden bg-mist-100">
                     <Image
                       src={workshop.coverUrl}
                       alt=""

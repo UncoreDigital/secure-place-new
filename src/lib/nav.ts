@@ -180,7 +180,6 @@ export const navEntries: NavEntry[] = [
 export function buildWorkshopsPanel(
   workshops: { slug: string; title: string; summary: string; durationMinutes: number; format: string }[],
 ): MegaPanel {
-  const half = Math.ceil(workshops.length / 2);
   const toItem = (w: (typeof workshops)[number]): MegaItem => ({
     label: w.title,
     href: `/workshops/${w.slug}`,
@@ -189,11 +188,24 @@ export function buildWorkshopsPanel(
     meta: `${Math.round(w.durationMinutes / 60)} hr`,
   });
 
+  const items = workshops.map(toItem);
+  // +1 for the "All workshops" row closing the second column, so the two stay
+  // even once it is appended.
+  const half = Math.ceil((items.length + 1) / 2);
+
   return {
     layout: "grid",
     columns: [
-      { title: "Catalogue", items: workshops.slice(0, half).map(toItem) },
-      { title: " ", items: workshops.slice(half).map(toItem) },
+      { title: "Catalogue", items: items.slice(0, half) },
+      {
+        // A non-breaking space, not an empty string: it keeps the second
+        // column top-aligned with the first without inventing a heading.
+        title: " ",
+        items: [
+          ...items.slice(half),
+          { label: "All workshops", href: "/workshops", icon: LayoutGrid },
+        ],
+      },
     ],
     // Was a "Next session" card showing a seeded date and venue. Workshops are
     // booked on request — there is no public schedule — so promoting a date

@@ -5,6 +5,7 @@ import { ArrowRight, Clock, Users, CalendarPlus } from "lucide-react";
 import { getWorkshops } from "@/lib/content";
 import PageHero from "@/components/site/PageHero";
 import Button from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 
 // Rebuilt at most every 5 minutes, so publishing in the portal reaches the
 // site without a redeploy.
@@ -43,22 +44,35 @@ export default async function WorkshopsPage() {
               return (
                 <article
                   key={workshop.id}
-                  className="reveal group grid overflow-hidden rounded-2xl border border-mist-200 transition-all duration-300 hover:border-mist-300 hover:shadow-(--shadow-e2) md:grid-cols-[minmax(0,0.85fr)_minmax(0,2fr)]"
+                  className={cn(
+                    "reveal group grid overflow-hidden rounded-2xl border border-mist-200 transition-all duration-300 hover:border-mist-300 hover:shadow-(--shadow-e2)",
+                    // Only split the card in two when there is an image to put
+                    // in the first column — otherwise the text inherits a 24rem
+                    // track and the rest of the card sits empty.
+                    workshop.coverUrl && "md:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]",
+                  )}
                   data-reveal-delay={i * 70}
                 >
                   {workshop.coverUrl && (
-                    <div className="relative min-h-[12rem] overflow-hidden bg-mist-100">
+                    /* The covers are 700x249 banners with the workshop name set
+                       into the artwork, so they cannot be cropped to fill a tall
+                       side column — object-cover sliced the lettering down to a
+                       fragment. The banner is laid on a mat at its own ratio
+                       instead: whole image, whatever the height of the text
+                       beside it. */
+                    <div className="flex items-center justify-center overflow-hidden bg-mist-50 p-6 md:border-r md:border-mist-200">
                       <Image
                         src={workshop.coverUrl}
                         alt=""
-                        fill
-                        sizes="(max-width: 768px) 100vw, 30vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        width={700}
+                        height={249}
+                        sizes="(max-width: 768px) 100vw, 24rem"
+                        className="h-auto w-full rounded-lg ring-1 ring-navy-950/5 transition-transform duration-500 group-hover:scale-[1.03]"
                       />
                     </div>
                   )}
 
-                  <div className="flex flex-col p-7 md:p-8">
+                  <div className="flex flex-1 flex-col p-7 md:p-8">
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-flame-700">
                       <span>{formatLabel[workshop.format] ?? workshop.format}</span>
                       <span className="flex items-center gap-2 text-mist-400">
@@ -90,7 +104,12 @@ export default async function WorkshopsPage() {
                       </p>
                     )}
 
-                    <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-mist-100 pt-5">
+                    {/* Grows so the action row sits on the card's floor however
+                        long the summary runs, keeping the two columns' rules
+                        aligned, while the margin holds a floor on the gap. */}
+                    <div aria-hidden className="mt-6 flex-1" />
+
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-mist-100 pt-5">
                       <Link
                         href={`/workshops/${workshop.slug}`}
                         className="inline-flex items-center gap-2 text-base font-semibold text-navy-950 hover:text-flame-700"
