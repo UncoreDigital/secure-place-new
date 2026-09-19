@@ -3,6 +3,7 @@ import { Archivo, Public_Sans, IBM_Plex_Mono } from "next/font/google";
 import { site } from "@/lib/site";
 import Header from "@/components/site/Header";
 import { getWorkshops } from "@/lib/content";
+import { workshopNavLimit } from "@/lib/nav";
 import Footer from "@/components/site/Footer";
 import RevealProvider from "@/components/site/RevealProvider";
 import "./globals.css";
@@ -63,14 +64,22 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   // Only plain data crosses into the client Header; it composes the menu
   // itself, because Lucide icon components cannot be serialised as props.
+  //
+  // Trimmed here rather than in the Header: this payload ships with every page,
+  // and fifty summaries are a lot of HTML for six menu rows. Featured first,
+  // then the portal's display order — the query's order, which a stable sort
+  // keeps within each group.
   const workshops = await getWorkshops();
-  const workshopNav = workshops.map((w) => ({
-    slug: w.slug,
-    title: w.title,
-    summary: w.summary,
-    durationMinutes: w.durationMinutes,
-    format: w.format as string,
-  }));
+  const workshopNav = [...workshops]
+    .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured))
+    .slice(0, workshopNavLimit)
+    .map((w) => ({
+      slug: w.slug,
+      title: w.title,
+      summary: w.summary,
+      durationMinutes: w.durationMinutes,
+      format: w.format as string,
+    }));
 
   return (
     <html lang="en" className={`${archivo.variable} ${publicSans.variable} ${plexMono.variable}`}>
@@ -97,7 +106,7 @@ export default async function RootLayout({
           Skip to content
         </a>
         <RevealProvider />
-        <Header workshops={workshopNav} />
+        <Header workshops={workshopNav} workshopTotal={workshops.length} />
         <main id="main" className="flex-1">
           {children}
         </main>

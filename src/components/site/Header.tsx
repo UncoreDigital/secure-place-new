@@ -28,7 +28,13 @@ type WorkshopNav = {
   format: string;
 };
 
-export default function Header({ workshops }: { workshops: WorkshopNav[] }) {
+export default function Header({
+  workshops,
+  workshopTotal,
+}: {
+  workshops: WorkshopNav[];
+  workshopTotal: number;
+}) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -43,10 +49,10 @@ export default function Header({ workshops }: { workshops: WorkshopNav[] }) {
     () =>
       navEntries.map((entry) =>
         entry.label === "Workshops"
-          ? { ...entry, mega: buildWorkshopsPanel(workshops) }
+          ? { ...entry, mega: buildWorkshopsPanel(workshops, workshopTotal) }
           : entry,
       ),
-    [workshops],
+    [workshops, workshopTotal],
   );
 
   // Reading-progress rail along the very top of the header.

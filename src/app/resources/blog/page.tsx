@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { getPosts, getPostCategories } from "@/lib/content";
 import { formatDate } from "@/lib/utils";
 import PageHero from "@/components/site/PageHero";
+import ShareOnLinkedIn from "@/components/site/ShareOnLinkedIn";
 
 // Rebuilt at most every 5 minutes, so publishing in the portal reaches the
 // site without a redeploy.
@@ -45,39 +46,49 @@ export default async function BlogPage() {
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {posts.map((post, i) => (
-              <Link
+              // The share button sits beside the link, not inside it: a button
+              // nested in an <a> is invalid HTML.
+              <div
                 key={post.id}
-                href={`/resources/blog/${post.slug}`}
-                className="reveal group flex flex-col overflow-hidden rounded-2xl border border-mist-200 transition-all duration-300 hover:-translate-y-1 hover:border-mist-300 hover:shadow-(--shadow-e2)"
+                className="reveal group relative flex flex-col overflow-hidden rounded-2xl border border-mist-200 transition-all duration-300 hover:-translate-y-1 hover:border-mist-300 hover:shadow-(--shadow-e2)"
                 data-reveal-delay={i * 70}
               >
-                {post.coverUrl && (
-                  <div className="relative aspect-[16/10] overflow-hidden bg-mist-100">
-                    <Image
-                      src={post.coverUrl}
-                      alt=""
-                      fill
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
+                <Link href={`/resources/blog/${post.slug}`} className="flex flex-1 flex-col">
+                  {post.coverUrl && (
+                    <div className="relative aspect-[16/10] overflow-hidden bg-mist-100">
+                      <Image
+                        src={post.coverUrl}
+                        alt=""
+                        fill
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                  )}
+                  <div className="flex flex-1 flex-col p-6">
+                    <span className="font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-flame-700">
+                      {post.category}
+                    </span>
+                    <h2 className="mt-3 font-display text-xl font-semibold leading-snug text-navy-950">
+                      {post.title}
+                    </h2>
+                    <p className="mt-3 flex-1 text-base leading-relaxed text-mist-500">
+                      {post.excerpt}
+                    </p>
+                    {/* Right padding keeps this row clear of the share button,
+                        which is pinned over its right end. */}
+                    <div className="mt-5 flex items-center gap-2 border-t border-mist-100 pt-4 pr-24 text-sm text-mist-400">
+                      <span>{formatDate(post.publishedAt)}</span>
+                      <span aria-hidden>·</span>
+                      <span>{post.readingMinutes} min</span>
+                    </div>
                   </div>
-                )}
-                <div className="flex flex-1 flex-col p-6">
-                  <span className="font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-flame-700">
-                    {post.category}
-                  </span>
-                  <h2 className="mt-3 font-display text-xl font-semibold leading-snug text-navy-950">
-                    {post.title}
-                  </h2>
-                  <p className="mt-3 flex-1 text-base leading-relaxed text-mist-500">
-                    {post.excerpt}
-                  </p>
-                  <div className="mt-5 flex items-center justify-between border-t border-mist-100 pt-4 text-sm text-mist-400">
-                    <span>{formatDate(post.publishedAt)}</span>
-                    <span>{post.readingMinutes} min</span>
-                  </div>
-                </div>
-              </Link>
+                </Link>
+                <ShareOnLinkedIn
+                  url={`/resources/blog/${post.slug}`}
+                  className="absolute right-6 bottom-[1.125rem] text-mist-500"
+                />
+              </div>
             ))}
           </div>
         </div>

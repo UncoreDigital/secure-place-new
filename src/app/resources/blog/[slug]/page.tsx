@@ -4,9 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import { getPost, getPostSlugs, getRelatedPosts } from "@/lib/content";
-import { formatDate } from "@/lib/utils";
-import { site } from "@/lib/site";
+import { cn, formatDate } from "@/lib/utils";
+import { site, logo } from "@/lib/site";
 import Button from "@/components/ui/Button";
+import ShareOnLinkedIn from "@/components/site/ShareOnLinkedIn";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -15,23 +16,51 @@ export async function generateStaticParams() {
   return slugs.map((slug) => ({ slug }));
 }
 
+/** Plain text for meta tags: no markup, one line, and short enough not to be cut mid-word by the crawler. */
+function toMetaText(value: string, max = 300): string {
+  const text = value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  if (text.length <= max) return text;
+  return `${text.slice(0, max - 1).replace(/\s+\S*$/, "")}…`;
+}
+
+/**
+ * LinkedIn's crawler builds the share card from these tags alone, so every
+ * value the card shows is set here explicitly rather than inherited.
+ *
+ * Next.js replaces the layout's openGraph and twitter objects wholesale instead
+ * of merging them, so siteName has to be repeated, and twitter has to be set or
+ * articles would carry the site-wide title. Relative image paths resolve
+ * against metadataBase, so fixture covers come out absolute too.
+ */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPost(slug);
   if (!post) return { title: "Article not found" };
 
+  const url = `${site.url}/resources/blog/${post.slug}`;
+  const description = toMetaText(post.seoDescription ?? post.excerpt);
+  const image = { url: post.coverUrl ?? logo.onLight, alt: post.title };
+
   return {
     title: post.seoTitle ?? post.title,
-    description: post.seoDescription ?? post.excerpt,
+    description,
     openGraph: {
       type: "article",
+      siteName: site.name,
+      url,
       title: post.title,
-      description: post.excerpt,
+      description,
       publishedTime: post.publishedAt,
       authors: [post.authorName],
-      images: post.coverUrl ? [post.coverUrl] : undefined,
+      images: [image],
     },
-    alternates: { canonical: `/resources/blog/${post.slug}` },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description,
+      images: [image],
+    },
+    alternates: { canonical: url },
   };
 }
 
@@ -58,7 +87,8 @@ export default async function ArticlePage({ params }: Props) {
       name: site.name,
       url: site.url,
     },
-    image: post.coverUrl ? `${site.url}${post.coverUrl}` : undefined,
+    // Covers are either site paths (fixtures) or absolute storage URLs.
+    image: post.coverUrl ? new URL(post.coverUrl, site.url).toString() : undefined,
     mainEntityOfPage: `${site.url}/resources/blog/${post.slug}`,
   };
 
@@ -103,6 +133,10 @@ export default async function ArticlePage({ params }: Props) {
               <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
               <span aria-hidden>·</span>
               <span>{post.readingMinutes} min read</span>
+              <ShareOnLinkedIn
+                url={`/resources/blog/${post.slug}`}
+                className="ml-auto text-white/70"
+              />
             </div>
           </div>
         </header>
@@ -158,6 +192,22 @@ export default async function ArticlePage({ params }: Props) {
                 </ul>
               </div>
             )}
+
+            {/* The tag list above already draws a rule; only draw one without it. */}
+            <div
+              className={cn(
+                "mx-auto flex max-w-[42rem] flex-wrap items-center justify-between gap-4",
+                post.tags.length > 0 ? "mt-8" : "mt-14 border-t border-mist-200 pt-7",
+              )}
+            >
+              <p className="text-base text-mist-500">
+                Found this useful? Share it with your network.
+              </p>
+              <ShareOnLinkedIn
+                url={`/resources/blog/${post.slug}`}
+                className="text-navy-950"
+              />
+            </div>
 
             {/* Contextual CTA: the assessment is the natural next step from a
                 piece about gaps in a safety programme. */}

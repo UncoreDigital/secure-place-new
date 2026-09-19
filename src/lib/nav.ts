@@ -177,45 +177,47 @@ export const navEntries: NavEntry[] = [
   { label: "About", href: "/about" },
 ];
 
+/**
+ * How many workshops the menu lists. The catalogue is heading past fifty; the
+ * menu is a doorway to it, not a copy of it — the full list outgrew the screen
+ * well before that. The index page has search and filters for the rest.
+ */
+export const workshopNavLimit = 6;
+
 export function buildWorkshopsPanel(
   workshops: { slug: string; title: string; summary: string; durationMinutes: number; format: string }[],
+  total: number,
 ): MegaPanel {
-  const toItem = (w: (typeof workshops)[number]): MegaItem => ({
-    label: w.title,
-    href: `/workshops/${w.slug}`,
-    description: w.summary,
-    icon: GraduationCap,
-    meta: `${Math.round(w.durationMinutes / 60)} hr`,
-  });
-
-  const items = workshops.map(toItem);
-  // +1 for the "All workshops" row closing the second column, so the two stay
-  // even once it is appended.
-  const half = Math.ceil((items.length + 1) / 2);
+  const items = workshops.slice(0, workshopNavLimit).map(
+    (w): MegaItem => ({
+      label: w.title,
+      href: `/workshops/${w.slug}`,
+      description: w.summary,
+      icon: GraduationCap,
+      meta: `${Math.round(w.durationMinutes / 60)} hr`,
+    }),
+  );
+  const half = Math.ceil(items.length / 2);
+  const capped = total > items.length;
 
   return {
     layout: "grid",
     columns: [
-      { title: "Catalogue", items: items.slice(0, half) },
-      {
-        // A non-breaking space, not an empty string: it keeps the second
-        // column top-aligned with the first without inventing a heading.
-        title: " ",
-        items: [
-          ...items.slice(half),
-          { label: "All workshops", href: "/workshops", icon: LayoutGrid },
-        ],
-      },
+      { title: capped ? "Featured" : "Catalogue", items: items.slice(0, half) },
+      // A non-breaking space, not an empty string: it keeps the second column
+      // top-aligned with the first without inventing a heading.
+      { title: " ", items: items.slice(half) },
     ],
-    // Was a "Next session" card showing a seeded date and venue. Workshops are
-    // booked on request — there is no public schedule — so promoting a date
-    // implied an open calendar that does not exist.
+    // The card is the way into everything the menu leaves out, so it leads
+    // with the count. It was a "Request a workshop" card; that route is still
+    // the main call to action on the index page itself.
     feature: {
-      eyebrow: "How it works",
-      title: "Run on your site, on your dates",
-      body: "Every workshop is arranged around your locations and shift patterns. Tell us what you need and we will put together an outline.",
-      href: "/contact",
-      cta: "Request a workshop",
+      eyebrow: "Full catalogue",
+      meta: `${total} workshop${total === 1 ? "" : "s"}`,
+      title: "Every workshop, run on your site and your dates",
+      body: "Search the catalogue by topic or format, then tell us when and where.",
+      href: "/workshops",
+      cta: "Browse all workshops",
     },
   };
 }

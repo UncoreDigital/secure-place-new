@@ -6,6 +6,7 @@ import { getPosts, getEpisodes, getAlbums } from "@/lib/content";
 import { formatDate } from "@/lib/utils";
 import PageHero from "@/components/site/PageHero";
 import SectionHeading from "@/components/site/SectionHeading";
+import ShareOnLinkedIn from "@/components/site/ShareOnLinkedIn";
 
 // Rebuilt at most every 5 minutes, so publishing in the portal reaches the
 // site without a redeploy.
@@ -39,43 +40,52 @@ export default async function ResourcesPage() {
       {lead && (
         <section className="bg-white section-y-sm">
           <div className="container-page">
-            <Link
-              href={`/resources/blog/${lead.slug}`}
-              className="reveal group grid overflow-hidden rounded-2xl border border-mist-200 transition-all duration-300 hover:border-mist-300 hover:shadow-(--shadow-e3) lg:grid-cols-2"
-            >
-              {lead.coverUrl && (
-                <div className="relative aspect-[16/10] overflow-hidden bg-mist-100 lg:aspect-auto">
-                  <Image
-                    src={lead.coverUrl}
-                    alt=""
-                    fill
-                    priority
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
+            {/* The share button sits beside the link, not inside it: a button
+                nested in an <a> is invalid HTML. */}
+            <div className="reveal group relative overflow-hidden rounded-2xl border border-mist-200 transition-all duration-300 hover:border-mist-300 hover:shadow-(--shadow-e3)">
+              <Link
+                href={`/resources/blog/${lead.slug}`}
+                className="grid lg:grid-cols-2"
+              >
+                {lead.coverUrl && (
+                  <div className="relative aspect-[16/10] overflow-hidden bg-mist-100 lg:aspect-auto">
+                    <Image
+                      src={lead.coverUrl}
+                      alt=""
+                      fill
+                      priority
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                )}
+                <div className="flex flex-col justify-center p-8 md:p-12">
+                  <span className="font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-flame-700">
+                    Featured · {lead.category}
+                  </span>
+                  <h2 className="mt-4 font-display text-fluid-sm font-bold leading-[1.12] text-navy-950">
+                    {lead.title}
+                  </h2>
+                  <p className="mt-4 text-md leading-relaxed text-mist-500">
+                    {lead.excerpt}
+                  </p>
+                  <div className="mt-7 flex items-center gap-4 text-sm text-mist-400">
+                    <span>{formatDate(lead.publishedAt)}</span>
+                    <span aria-hidden>·</span>
+                    <span>{lead.readingMinutes} min read</span>
+                  </div>
+                  <span className="mt-6 inline-flex items-center gap-2 text-base font-semibold text-navy-950 group-hover:text-flame-700">
+                    Read the article
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </span>
                 </div>
-              )}
-              <div className="flex flex-col justify-center p-8 md:p-12">
-                <span className="font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-flame-700">
-                  Featured · {lead.category}
-                </span>
-                <h2 className="mt-4 font-display text-fluid-sm font-bold leading-[1.12] text-navy-950">
-                  {lead.title}
-                </h2>
-                <p className="mt-4 text-md leading-relaxed text-mist-500">
-                  {lead.excerpt}
-                </p>
-                <div className="mt-7 flex items-center gap-4 text-sm text-mist-400">
-                  <span>{formatDate(lead.publishedAt)}</span>
-                  <span aria-hidden>·</span>
-                  <span>{lead.readingMinutes} min read</span>
-                </div>
-                <span className="mt-6 inline-flex items-center gap-2 text-base font-semibold text-navy-950 group-hover:text-flame-700">
-                  Read the article
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                </span>
-              </div>
-            </Link>
+              </Link>
+              {/* Level with the "Read the article" line, at the card's padding. */}
+              <ShareOnLinkedIn
+                url={`/resources/blog/${lead.slug}`}
+                className="absolute right-8 bottom-7 text-mist-500 md:right-12 md:bottom-11"
+              />
+            </div>
           </div>
         </section>
       )}
@@ -101,27 +111,38 @@ export default async function ResourcesPage() {
 
             <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {rest.map((post, i) => (
-                <Link
+                <div
                   key={post.id}
-                  href={`/resources/blog/${post.slug}`}
-                  className="reveal group flex flex-col rounded-2xl border border-mist-200 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-(--shadow-e2)"
+                  className="reveal group relative flex flex-col rounded-2xl border border-mist-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-(--shadow-e2)"
                   data-reveal-delay={i * 70}
                 >
-                  <span className="inline-flex items-center gap-2 font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-flame-700">
-                    <FileText className="h-3 w-3" />
-                    {post.category}
-                  </span>
-                  <h3 className="mt-3 font-display text-xl font-semibold leading-snug text-navy-950">
-                    {post.title}
-                  </h3>
-                  <p className="mt-3 flex-1 text-base leading-relaxed text-mist-500">
-                    {post.excerpt}
-                  </p>
-                  <div className="mt-5 flex items-center justify-between border-t border-mist-100 pt-4 text-sm text-mist-400">
-                    <span>{formatDate(post.publishedAt)}</span>
-                    <span>{post.readingMinutes} min</span>
-                  </div>
-                </Link>
+                  <Link
+                    href={`/resources/blog/${post.slug}`}
+                    className="flex flex-1 flex-col rounded-2xl p-6"
+                  >
+                    <span className="inline-flex items-center gap-2 font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-flame-700">
+                      <FileText className="h-3 w-3" />
+                      {post.category}
+                    </span>
+                    <h3 className="mt-3 font-display text-xl font-semibold leading-snug text-navy-950">
+                      {post.title}
+                    </h3>
+                    <p className="mt-3 flex-1 text-base leading-relaxed text-mist-500">
+                      {post.excerpt}
+                    </p>
+                    {/* Right padding keeps this row clear of the share button,
+                        which is pinned over its right end. */}
+                    <div className="mt-5 flex items-center gap-2 border-t border-mist-100 pt-4 pr-24 text-sm text-mist-400">
+                      <span>{formatDate(post.publishedAt)}</span>
+                      <span aria-hidden>·</span>
+                      <span>{post.readingMinutes} min</span>
+                    </div>
+                  </Link>
+                  <ShareOnLinkedIn
+                    url={`/resources/blog/${post.slug}`}
+                    className="absolute right-6 bottom-[1.125rem] text-mist-500"
+                  />
+                </div>
               ))}
             </div>
           </div>
