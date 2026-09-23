@@ -7,12 +7,13 @@
  * change here as a change to a published claim, and bump ENGINE_VERSION so
  * stored submissions stay reproducible.
  *
- * Structure: five pillars, four questions each, every option worth 0-5 points.
+ * Structure: five pillars, four questions each (six in training & drill
+ * readiness), every option worth 0-5 points.
  * Pillar weights sum to 100 and reflect what Secure Place actually certifies
  * against — emergency response and speak-up carry the most.
  */
 
-export const ENGINE_VERSION = "v1";
+export const ENGINE_VERSION = "v2";
 
 export type PillarId =
   | "emergency"
@@ -49,7 +50,7 @@ export const pillars: Pillar[] = [
   },
   {
     id: "training",
-    label: "Training & awareness",
+    label: "Response & Awareness",
     weight: 20,
     blurb: "Whether staff know what to do before they need to know it.",
     gapAdvice:
@@ -57,11 +58,11 @@ export const pillars: Pillar[] = [
   },
   {
     id: "drills",
-    label: "Drills & response readiness",
+    label: "Training and Drill readiness",
     weight: 15,
-    blurb: "Whether the plan has been rehearsed and measured, not just written.",
+    blurb: "Whether staff have hands-on training for emergencies, harassment prevention and wellbeing.",
     gapAdvice:
-      "Time every evacuation from alarm to last person at the assembly point, measure participation per floor, and turn each finding into an owned, dated action reviewed at the next drill.",
+      "Roll out CPR & First Aid and Fire Safety training beyond designated teams, make POSH and ICC awareness mandatory for all staff, and add regular wellbeing and ergonomics sessions.",
   },
   {
     id: "compliance",
@@ -89,15 +90,14 @@ export const MAX_POINTS = 5;
 export const questions: Question[] = [
   // --- emergency preparedness ----------------------------------------------
   {
-    id: "emg_sos",
+    id: "emg_complaint",
     pillar: "emergency",
-    text: "Can any employee raise an emergency alert from their own phone?",
-    help: "And does it reach security and trained volunteers, not just a switchboard.",
+    text: "Do your employees know where and how to raise a workplace complaint?",
     options: [
-      { label: "Yes — reaches security and trained volunteers instantly", points: 5 },
-      { label: "Yes, but it reaches one central desk only", points: 3 },
-      { label: "Only by calling a posted number", points: 1 },
-      { label: "No defined way to raise an alert", points: 0 },
+      { label: "Yes — the channel is well publicised and staff can name it", points: 5 },
+      { label: "A channel exists, but awareness is patchy", points: 3 },
+      { label: "Only HR or managers know the process", points: 1 },
+      { label: "No defined way to raise a complaint", points: 0 },
     ],
   },
   {
@@ -184,7 +184,7 @@ export const questions: Question[] = [
     ],
   },
 
-  // --- training & awareness -------------------------------------------------
+  // --- response & awareness -------------------------------------------------
   {
     id: "trn_coverage",
     pillar: "training",
@@ -231,50 +231,71 @@ export const questions: Question[] = [
     ],
   },
 
-  // --- drills & response readiness -----------------------------------------
+  // --- training & drill readiness -------------------------------------------
   {
-    id: "drl_frequency",
+    id: "drl_cpr",
     pillar: "drills",
-    text: "How many evacuation drills did you run in the last 12 months?",
+    text: "Does your organization provide CPR & First Aid training to employees?",
     options: [
-      { label: "Three or more, across all sites", points: 5 },
-      { label: "One or two", points: 3 },
-      { label: "One, at the head office only", points: 1 },
-      { label: "None", points: 0 },
+      { label: "Yes — certified training with scheduled refreshers", points: 5 },
+      { label: "Yes, but only for a few designated staff", points: 3 },
+      { label: "Conducted once, not repeated", points: 1 },
+      { label: "No", points: 0 },
     ],
   },
   {
-    id: "drl_timed",
+    id: "drl_fire",
     pillar: "drills",
-    text: "Do you record how long the evacuation took?",
-    help: "Alarm to the last person reaching the assembly point.",
+    text: "Does your organization provide Fire Safety & Emergency Response training to employees?",
     options: [
-      { label: "Yes, every drill, and we compare across drills", points: 5 },
-      { label: "Sometimes", points: 3 },
-      { label: "No, but we note that it happened", points: 1 },
-      { label: "No record kept", points: 0 },
+      { label: "Yes — for all staff, with regular hands-on drills", points: 5 },
+      { label: "Yes, but only classroom sessions or occasional drills", points: 3 },
+      { label: "Only for the fire warden team", points: 1 },
+      { label: "No", points: 0 },
     ],
   },
   {
-    id: "drl_participation",
+    id: "drl_posh",
     pillar: "drills",
-    text: "Do you measure participation per floor or department?",
+    text: "Does your organization provide POSH awareness training to employees?",
     options: [
-      { label: "Yes — we can see which areas lag", points: 5 },
-      { label: "Overall headcount only", points: 3 },
-      { label: "Rough estimate", points: 1 },
-      { label: "Not measured", points: 0 },
+      { label: "Yes — mandatory for all staff and refreshed annually", points: 5 },
+      { label: "Yes, but not mandatory or not refreshed", points: 3 },
+      { label: "Policy is shared, no training delivered", points: 1 },
+      { label: "No", points: 0 },
     ],
   },
   {
-    id: "drl_actions",
+    id: "drl_icc",
     pillar: "drills",
-    text: "Do drill findings become owned, dated action items?",
+    text: "Are employees trained on the role and responsibilities of the Internal Committee (ICC)?",
     options: [
-      { label: "Yes, and we review them at the next drill", points: 5 },
-      { label: "Actions are noted but not tracked", points: 3 },
-      { label: "A report is filed and closed", points: 1 },
-      { label: "No report produced", points: 0 },
+      { label: "Yes — staff know the members and how to approach them", points: 5 },
+      { label: "Covered briefly in general training", points: 3 },
+      { label: "Only ICC members themselves are trained", points: 1 },
+      { label: "No", points: 0 },
+    ],
+  },
+  {
+    id: "drl_wellbeing",
+    pillar: "drills",
+    text: "Does your organization provide Stress Management & Mental Wellbeing sessions to employees?",
+    options: [
+      { label: "Yes — regular sessions with ongoing support available", points: 5 },
+      { label: "Occasional sessions", points: 3 },
+      { label: "Resources shared, no sessions held", points: 1 },
+      { label: "No", points: 0 },
+    ],
+  },
+  {
+    id: "drl_ergonomics",
+    pillar: "drills",
+    text: "Does your organization provide Ergonomics & Workplace Wellness training to employees?",
+    options: [
+      { label: "Yes — for all staff, including remote workers", points: 5 },
+      { label: "Yes, but only at some sites or for some teams", points: 3 },
+      { label: "Guidelines shared, no training", points: 1 },
+      { label: "No", points: 0 },
     ],
   },
 
@@ -305,7 +326,7 @@ export const questions: Question[] = [
   {
     id: "cmp_records",
     pillar: "compliance",
-    text: "Could you produce training and drill records for an auditor this week?",
+    text: "Could you produce training and drill records for an auditor?",
     options: [
       { label: "Yes — centrally held and retrievable", points: 5 },
       { label: "Yes, but it would take some assembling", points: 3 },

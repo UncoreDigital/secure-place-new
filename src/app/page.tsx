@@ -161,8 +161,8 @@ export default async function HomePage() {
               {[
                 { label: "Emergency preparedness", weight: 25 },
                 { label: "Speak-up & reporting", weight: 25 },
-                { label: "Training & awareness", weight: 20 },
-                { label: "Drills & readiness", weight: 15 },
+                { label: "Response & Awareness", weight: 20 },
+                { label: "Training and Drill readiness", weight: 15 },
               ].map((pillar) => (
                 <div key={pillar.label} className="bg-navy-950 p-5">
                   <span className="block font-mono text-3xl font-semibold leading-none tabular-nums text-flame-500">
