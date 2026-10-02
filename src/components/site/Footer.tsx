@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Mail, Phone, ArrowUpRight } from "lucide-react";
 import { footerNav, site, logo } from "@/lib/site";
+import FollowOnLinkedIn from "@/components/site/FollowOnLinkedIn";
 
 export default function Footer() {
   const year = new Date().getFullYear();
@@ -42,6 +43,8 @@ export default function Footer() {
                 {site.phone}
               </a>
             </div>
+
+            <FollowOnLinkedIn className="mt-7 text-white/80" />
           </div>
 
           <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4">

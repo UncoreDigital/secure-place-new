@@ -18,6 +18,15 @@ export const site = {
   email: "pratik@secureplacetowork.com",
   phone: "+91 85528 59594",
   phoneHref: "tel:+918552859594",
+  /**
+   * LinkedIn company page. The numeric ID is what the Follow Company plugin
+   * takes (it is the number in the page's /company/<id>/admin/ URL); the
+   * numeric URL redirects to the page's vanity slug, so it never goes stale.
+   */
+  linkedin: {
+    companyId: "109988660",
+    url: "https://www.linkedin.com/company/109988660/",
+  },
   /** The certification threshold, used on the certification page and by the Secure Score. */
   certificationThreshold: 70,
 } as const;
