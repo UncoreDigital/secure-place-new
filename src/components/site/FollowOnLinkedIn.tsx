@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Linkedin } from "lucide-react";
 import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
@@ -38,12 +38,24 @@ function parse(host: HTMLElement | null) {
  * container is parsed again on mount. Parsing twice is safe: in.js marks each
  * tag it has handled and skips it after.
  *
+ * Follow only: the plugin is a toggle, and pressing "Following" unfollows.
+ * The site must not unfollow anyone, so once the button has been pressed it
+ * goes inert for the rest of the visit. The iframe is cross-origin, so the
+ * press itself is invisible here; what shows is focus moving into the iframe
+ * on mousedown, then either the pointer leaving it or the page going hidden
+ * as LinkedIn opens the company page in a new tab, which it does after every
+ * press. Locking waits for one of those, because going inert mid-press would
+ * swallow the mouseup and with it the follow. The follow state itself is
+ * never readable, so a visitor who already follows sees "Following" and their
+ * first press still unfollows — LinkedIn offers no way around that.
+ *
  * Tracker blockers commonly block platform.linkedin.com. Until the iframe
  * appears, a plain link to the page stands in, so the footer is never left
  * with a gap.
  */
 export default function FollowOnLinkedIn({ className }: Props) {
   const host = useRef<HTMLDivElement>(null);
+  const [locked, setLocked] = useState(false);
 
   useEffect(() => {
     const el = host.current;
@@ -59,6 +71,31 @@ export default function FollowOnLinkedIn({ className }: Props) {
     return () => el.replaceChildren();
   }, []);
 
+  useEffect(() => {
+    const el = host.current;
+    if (!el || locked) return;
+
+    const iframeFocused = () => {
+      const active = document.activeElement;
+      return active instanceof HTMLIFrameElement && el.contains(active);
+    };
+
+    let pressed = false;
+    // activeElement only points at the iframe once the window blur settles.
+    const onBlur = () => setTimeout(() => (pressed ||= iframeFocused()));
+    const onLeave = () => pressed && setLocked(true);
+    const onHide = () => document.hidden && (pressed || iframeFocused()) && setLocked(true);
+
+    window.addEventListener("blur", onBlur);
+    el.addEventListener("pointerleave", onLeave);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("blur", onBlur);
+      el.removeEventListener("pointerleave", onLeave);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [locked]);
+
   return (
     <div className={cn("group/follow", className)}>
       <Script
@@ -67,7 +104,7 @@ export default function FollowOnLinkedIn({ className }: Props) {
         strategy="lazyOnload"
         onReady={() => parse(host.current)}
       />
-      <div ref={host} />
+      <div ref={host} inert={locked} />
       <a
         href={site.linkedin.url}
         target="_blank"
